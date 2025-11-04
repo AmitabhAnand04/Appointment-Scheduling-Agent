@@ -22,6 +22,23 @@ from db.connection import get_connection
 #     return result
 
 def find_patient(first_name=None, last_name=None, dob=None, phone=None, ssn=None):
+    """
+    Find an existing patient by their last name and at least one unique identifier (date of birth, phone, or SSN).
+
+    Args:
+        first_name (str, optional): Patient's first name for refining the search.
+        last_name (str): Patient's last name. (Required)
+        dob (str, optional): Date of birth in YYYY-MM-DD format.
+        phone (str, optional): Patient's phone number.
+        ssn (str, optional): Patient's SSN.
+
+    Note:
+        Either `dob`, `phone`, or `ssn` must be provided along with `last_name`.
+
+    Returns:
+        list: A list of matching patients with details like PatientID, name, contact info, and last seen doctor.
+    """
+    print("-------------Tool Called: find_patient-------------")
     conn = get_connection()
     cur = conn.cursor()
 
@@ -69,5 +86,5 @@ def find_patient(first_name=None, last_name=None, dob=None, phone=None, ssn=None
             "Email": row["email"],
             "LastDoctorName": row["lastdoctorname"] or "No previous doctor"
         })
-
+    print("-------------Tool Ended: find_patient-------------")
     return patients

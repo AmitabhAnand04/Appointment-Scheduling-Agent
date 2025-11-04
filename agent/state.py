@@ -2,8 +2,8 @@ from typing import Optional
 from langgraph.graph import MessagesState
 
 class AppointmentState(MessagesState):
-    first_name: str
-    last_name: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     dob: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None 
@@ -15,3 +15,5 @@ class AppointmentState(MessagesState):
     doctor_id: Optional[int] = None
     slot_id: Optional[int] = None
     appointment_id: Optional[int] = None
+    appointment_date: Optional[str] = None
+    last_doctor_name: Optional[str] = None
