@@ -21,53 +21,118 @@ logging.basicConfig(
 
 
 # -------------------- Helper --------------------
+# def invoke_graph(user_query: str, thread_id: str = None):
+#     """
+#     Invoke the compiled LangGraph agent graph with thread memory.
+#     """
+#     current_thread_id = thread_id or str(uuid4())
+#     human_message = HumanMessage(content=user_query)
+#     config = {"configurable": {"thread_id": current_thread_id}}
+
+#     # Call the compiled graph
+#     response = react_graph.invoke({"messages": [human_message]}, config)
+#     messages = response.get("messages", [])
+#     last_message = messages[-1] if messages else None
+#     # return last_message
+#     # content = getattr(last_message, "content", "")
+#     text = ""
+#     # if isinstance(last_message.get("content"), list) and len(last_message["content"]) > 0:
+#     #     first_item = last_message["content"][0]
+#     #     text = first_item.get("text", "")
+#     if last_message:
+#         content = last_message.content
+        
+#         if isinstance(content, str):
+#             # Case 1: Simple string (direct model response)
+#             text = content
+            
+#         elif isinstance(content, dict) and "text" in content:
+#             # Case 2: Dictionary with a direct 'text' key (common structured output)
+#             text = content["text"]
+            
+#         elif isinstance(content, list) and content and isinstance(content[0], dict) and "text" in content[0]:
+#             # Case 3: List containing a dictionary, with 'text' inside the dictionary 
+#             # (This handles the specific format you provided: [{'type': 'text', 'text': '...'}])
+#             text = content[0]["text"]
+            
+#         else:
+#             # Fallback: Convert to string to ensure nothing is lost, 
+#             # or handle edge cases where the content might be another type (like a ToolMessage object)
+#             text = str(content)
+#     print(text)
+
+
+#     # Prepare structured response
+#     return {
+#         "result": text,
+#         "message_state_length": len(messages),
+#         "all_messages_in_message_state": messages,
+#         "thread_id": current_thread_id
+#     }
+MAX_RETRIES = 3
 def invoke_graph(user_query: str, thread_id: str = None):
     """
     Invoke the compiled LangGraph agent graph with thread memory.
+    Automatically retries immediately if the response is empty or malformed.
     """
     current_thread_id = thread_id or str(uuid4())
-    human_message = HumanMessage(content=user_query)
     config = {"configurable": {"thread_id": current_thread_id}}
+    human_message = HumanMessage(content=user_query)
 
-    # Call the compiled graph
-    response = react_graph.invoke({"messages": [human_message]}, config)
-    messages = response.get("messages", [])
-    last_message = messages[-1] if messages else None
-    # return last_message
-    # content = getattr(last_message, "content", "")
+    attempt = 0
     text = ""
-    # if isinstance(last_message.get("content"), list) and len(last_message["content"]) > 0:
-    #     first_item = last_message["content"][0]
-    #     text = first_item.get("text", "")
-    if last_message:
-        content = last_message.content
-        
-        if isinstance(content, str):
-            # Case 1: Simple string (direct model response)
-            text = content
-            
-        elif isinstance(content, dict) and "text" in content:
-            # Case 2: Dictionary with a direct 'text' key (common structured output)
-            text = content["text"]
-            
-        elif isinstance(content, list) and content and isinstance(content[0], dict) and "text" in content[0]:
-            # Case 3: List containing a dictionary, with 'text' inside the dictionary 
-            # (This handles the specific format you provided: [{'type': 'text', 'text': '...'}])
-            text = content[0]["text"]
-            
-        else:
-            # Fallback: Convert to string to ensure nothing is lost, 
-            # or handle edge cases where the content might be another type (like a ToolMessage object)
-            text = str(content)
-    print(text)
+    messages = []
 
+    while attempt < MAX_RETRIES:
+        attempt += 1
 
-    # Prepare structured response
+        # Call the compiled graph
+        response = react_graph.invoke({"messages": [human_message]}, config)
+        messages = response.get("messages", [])
+        last_message = messages[-1] if messages else None
+
+        text = ""
+        if last_message:
+            content = getattr(last_message, "content", "")
+
+            if isinstance(content, str):
+                # Case 1: Direct string
+                text = content.strip()
+
+            elif isinstance(content, dict) and "text" in content:
+                # Case 2: Dict with a 'text' key
+                text = str(content["text"]).strip()
+
+            elif (
+                isinstance(content, list)
+                and content
+                and isinstance(content[0], dict)
+                and "text" in content[0]
+            ):
+                # Case 3: List containing a dict with 'text'
+                text = str(content[0]["text"]).strip()
+
+            else:
+                # Fallback
+                text = str(content).strip()
+
+        # ✅ Break if valid response found
+        if text:
+            break
+
+        # ⚠️ Log for visibility (optional)
+        print(f"[WARN] Empty response from agent (attempt {attempt}/{MAX_RETRIES}). Retrying...")
+
+    # 🧩 Fallback if still no valid text
+    if not text:
+        text = "[Error] Agent returned no valid response after multiple attempts."
+
     return {
         "result": text,
         "message_state_length": len(messages),
         "all_messages_in_message_state": messages,
-        "thread_id": current_thread_id
+        "thread_id": current_thread_id,
+        "attempts": attempt
     }
 
 
