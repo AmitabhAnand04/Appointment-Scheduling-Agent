@@ -34,7 +34,6 @@ ormsgpack==1.11.0
 packaging==25.0
 proto-plus==1.26.1
 protobuf==6.33.0
-psycopg2==2.9.11
 pyasn1==0.6.1
 pyasn1_modules==0.4.2
 pydantic==2.12.3
@@ -54,3 +53,4 @@ urllib3==2.5.0
 uvicorn==0.38.0
 xxhash==3.6.0
 zstandard==0.25.0
+psycopg2-binary
